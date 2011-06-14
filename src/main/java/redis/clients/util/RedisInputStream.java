@@ -84,7 +84,7 @@ public class RedisInputStream extends FilterInputStream {
                 }
             }
         } catch (IOException e) {
-            throw new JedisException(e);
+            throw new JedisConnectionException(e);
         }
         String reply = sb.toString();
         if (reply.length() == 0) {

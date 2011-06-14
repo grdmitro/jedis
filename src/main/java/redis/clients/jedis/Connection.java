@@ -1,7 +1,9 @@
 package redis.clients.jedis;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.List;
@@ -102,7 +104,9 @@ public class Connection {
     public void connect() {
         if (!isConnected()) {
             try {
-                socket = new Socket(host, port);
+            	SocketAddress socketAddess = new InetSocketAddress(host, port);
+                socket = new Socket();
+                socket.connect(socketAddess, timeout);
                 socket.setSoTimeout(timeout);
                 outputStream = new RedisOutputStream(socket.getOutputStream());
                 inputStream = new RedisInputStream(socket.getInputStream());
