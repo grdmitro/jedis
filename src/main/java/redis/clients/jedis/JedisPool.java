@@ -8,63 +8,52 @@ import redis.clients.util.Pool;
 
 public class JedisPool extends Pool<Jedis> {
 
-    public JedisPool(final GenericObjectPool.Config poolConfig,
+	public JedisPool(final GenericObjectPool.Config poolConfig,
             final String host) {
-        this(poolConfig, host, Protocol.DEFAULT_PORT, Protocol.DEFAULT_TIMEOUT,
-                null);
+        this(poolConfig, host, Protocol.DEFAULT_PORT, Protocol.DEFAULT_TIMEOUT, null);
     }
 
     public JedisPool(String host, int port) {
-        super(new Config(), new JedisFactory(host, port,
-                Protocol.DEFAULT_TIMEOUT, null));
+        this(new Config(), host, port);
+    }
+    
+    public JedisPool(final Config poolConfig, final String host, final int port) {
+        this(poolConfig, host, port, Protocol.DEFAULT_TIMEOUT);
     }
 
+    public JedisPool(final Config poolConfig, final String host, final int port, 
+    		final int timeout) {
+        this(poolConfig, host, port, timeout, null);
+    }
+    
     public JedisPool(final Config poolConfig, final String host, int port,
             int timeout, final String password) {
-        super(poolConfig, new JedisFactory(host, port, timeout, password));
+    	this(poolConfig, new JedisShardInfo(host, port, password, timeout));
     }
-
-    public JedisPool(final GenericObjectPool.Config poolConfig,
-            final String host, final int port) {
-        this(poolConfig, host, port, Protocol.DEFAULT_TIMEOUT, null);
+    
+    public JedisPool(final Config poolConfig, JedisShardInfo shardInfo) {
+    	super(poolConfig, new JedisFactory(shardInfo));
     }
-
-    public JedisPool(final GenericObjectPool.Config poolConfig,
-            final String host, final int port, final int timeout) {
-        this(poolConfig, host, port, timeout, null);
+    
+    @Override
+    public void destroy() {
+    	super.destroy();
     }
 
     /**
      * PoolableObjectFactory custom impl.
      */
     private static class JedisFactory extends BasePoolableObjectFactory {
-        private final String host;
-        private final int port;
-        private final int timeout;
-        private final String password;
 
-        public JedisFactory(final String host, final int port,
-                final int timeout, final String password) {
-            super();
-            this.host = host;
-            this.port = port;
-            this.timeout = (timeout > 0) ? timeout : -1;
-            this.password = password;
+    	private final JedisShardInfo shardInfo;
+
+        public JedisFactory(JedisShardInfo shardInfo){
+        	super();
+        	this.shardInfo = shardInfo;
         }
 
         public Object makeObject() throws Exception {
-            final Jedis jedis;
-            if (timeout > 0) {
-                jedis = new Jedis(this.host, this.port, this.timeout);
-            } else {
-                jedis = new Jedis(this.host, this.port);
-            }
-
-            jedis.connect();
-            if (null != this.password) {
-                jedis.auth(this.password);
-            }
-            return jedis;
+            return shardInfo.createResource();
         }
 
         public void destroyObject(final Object obj) throws Exception {
